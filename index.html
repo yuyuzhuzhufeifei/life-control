@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#FF6B9D">
+    <title>个人全能管控系统 v3.4</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B9D',
+                        secondary: '#A78BFA',
+                        success: '#34D399',
+                        warning: '#FBBF24',
+                        danger: '#F87171',
+                        cheat: '#F472B6',
+                        sleep: '#818CF8',
+                        practice: '#2DD4BF',
+                        reward: '#F59E0B',
+                        dark: '#1E293B',
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto { content-visibility: auto; }
+            .tab-active { @apply bg-white/80 text-primary border-b-2 border-primary shadow-lg; }
+            .card { @apply bg-white/70 backdrop-blur-md rounded-2xl shadow-lg p-5 mb-5 border border-white/30; }
+            .btn { @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300 transform active:scale-95; }
+            .btn-primary { @apply bg-gradient-to-r from-primary to-secondary text-white hover:from-primary/90 hover:to-secondary/90; }
+            .btn-success { @apply bg-gradient-to-r from-success to-emerald-400 text-white hover:from-success/90 hover:to-emerald-400/90; }
+            .btn-danger { @apply bg-gradient-to-r from-danger to-rose-400 text-white hover:from-danger/90 hover:to-rose-400/90; }
+            .btn-cheat { @apply bg-gradient-to-r from-cheat to-pink-400 text-white hover:from-cheat/90 hover:to-pink-400/90; }
+            .btn-sleep { @apply bg-gradient-to-r from-sleep to-indigo-400 text-white hover:from-sleep/90 hover:to-indigo-400/90; }
+            .btn-practice { @apply bg-gradient-to-r from-practice to-teal-400 text-white hover:from-practice/90 hover:to-teal-400/90; }
+            .btn-reward { @apply bg-gradient-to-r from-reward to-yellow-400 text-white hover:from-reward/90 hover:to-yellow-400/90; }
+            .input { @apply w-full px-4 py-2.5 bg-white/60 backdrop-blur-sm border border-white/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary; }
+            .select { @apply w-full px-4 py-2.5 bg-white/60 backdrop-blur-sm border border-white/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary; }
+            .food-tag { @apply px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 transform hover:scale-105; }
+            .food-tag-selected { @apply bg-gradient-to-r from-primary to-secondary text-white shadow-md; }
+            .food-tag-unselected { @apply bg-white/60 text-gray-700 hover:bg-white/80; }
+            .progress-bar { @apply h-3 bg-white/40 rounded-full overflow-hidden; }
+            .progress-fill { @apply h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 rounded-full; }
+            .anime-bg { position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1; background: linear-gradient(135deg, #fce7f3 0%, #f3e8ff 50%, #dbeafe 100%); overflow: hidden; }
+            .particle { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.6); animation: float 15s infinite ease-in-out; }
+            @keyframes float { 0%,100% { transform: translateY(0) rotate(0deg); opacity:0.6; } 50% { transform: translateY(-100px) rotate(180deg); opacity:0.3; } }
+            .reward-card { @apply bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200; }
+            .method-card { @apply bg-white/60 hover:bg-white/80 transition-all duration-200 cursor-pointer; }
+            .safe-area-top { padding-top: env(safe-area-inset-top); }
+            .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+            .modal-overlay { @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4; }
+            .modal-content { @apply bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto; }
+        }
+    </style>
+</head>
+<body class="min-h-screen safe-area-top safe-area-bottom">
+    <!-- 动漫背景 -->
+    <div class="anime-bg"><div id="particles"></div></div>
+
+    <!-- 数据备份弹窗 -->
+    <div id="backup-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-100"><h3 class="text-xl font-bold text-dark">数据备份与恢复</h3><p class="text-gray-600 text-sm mt-1">定期备份，防止数据丢失</p></div>
+            <div class="p-6 space-y-4">
+                <div><h4 class="font-medium text-gray-700 mb-2">📤 导出数据</h4><p class="text-sm text-gray-600 mb-3">将数据保存到手机，换设备时可恢复</p><button onclick="exportData()" class="btn btn-primary w-full"><i class="fa fa-download mr-2"></i> 导出备份文件</button></div>
+                <div class="border-t pt-4"><h4 class="font-medium text-gray-700 mb-2">📥 导入数据</h4><p class="text-sm text-gray-600 mb-3">从备份文件恢复数据</p><input type="file" id="import-file" accept=".json" class="input mb-3"><button onclick="importData()" class="btn btn-success w-full"><i class="fa fa-upload mr-2"></i> 恢复备份</button></div>
+                <div class="border-t pt-4"><h4 class="font-medium text-gray-700 mb-2">⚠️ 危险操作</h4><button onclick="clearAllData()" class="btn btn-danger w-full"><i class="fa fa-trash mr-2"></i> 清除所有数据</button></div>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-b-2xl"><button onclick="closeModal('backup-modal')" class="btn bg-gray-200 text-gray-700 w-full">关闭</button></div>
+        </div>
+    </div>
+
+    <!-- 杂念记录弹窗（修复版） -->
+    <div id="distraction-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-100"><h3 class="text-xl font-bold text-dark">记录杂念</h3><p class="text-gray-600 text-sm mt-1">觉察即转念，记录即放下</p></div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-gray-700 mb-2">选择场景（快速记录）</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="scene-option flex items-center p-3 bg-white/60 rounded-lg hover:bg-primary/10 cursor-pointer"><input type="radio" name="scene" value="刷手机" class="mr-2"><span>刷手机</span></label>
+                        <label class="scene-option flex items-center p-3 bg-white/60 rounded-lg hover:bg-primary/10 cursor-pointer"><input type="radio" name="scene" value="睡前胡思乱想" class="mr-2"><span>睡前胡思乱想</span></label>
+                        <label class="scene-option flex items-center p-3 bg-white/60 rounded-lg hover:bg-primary/10 cursor-pointer"><input type="radio" name="scene" value="工作/学习分心" class="mr-2"><span>工作/学习分心</span></label>
+                        <label class="scene-option flex items-center p-3 bg-white/60 rounded-lg hover:bg-primary/10 cursor-pointer"><input type="radio" name="scene" value="独处无聊" class="mr-2"><span>独处无聊</span></label>
+                        <label class="scene-option flex items-center p-3 bg-white/60 rounded-lg hover:bg-primary/10 cursor-pointer"><input type="radio" name="scene" value="情绪波动" class="mr-2"><span>情绪波动</span></label>
+                        <label class="scene-option flex items-center p-3 bg-white/60 rounded-lg hover:bg-primary/10 cursor-pointer"><input type="radio" name="scene" value="其他" class="mr-2"><span>其他</span></label>
+                    </div>
+                </div>
+                <div><label class="block text-gray-700 mb-1">详细场景描述</label><input type="text" id="distraction-detail" class="input" placeholder="例如：刷短视频时突然想到前任..."></div>
+                <div><label class="block text-gray-700 mb-1">自省备注</label><textarea id="distraction-reflection" class="input" rows="3" placeholder="为什么会生起这个念头？如何应对？"></textarea></div>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-b-2xl flex gap-3">
+                <button onclick="closeModal('distraction-modal')" class="btn bg-gray-200 text-gray-700 flex-1">取消</button>
+                <!-- 修复：添加event参数，防止弹窗误关 -->
+                <div class="bg-pink-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-pink-600 transition-colors flex items-center justify-center flex-1 cursor-pointer" onclick="saveDistractionRecord(event)">
+                    <span class="mr-2">💾</span> 保存记录
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-6 max-w-4xl relative z-10">
+        <!-- 顶部标题 -->
+        <header class="mb-6 text-center">
+            <div class="flex justify-between items-center mb-2">
+                <h1 class="text-2xl md:text-3xl font-bold text-dark drop-shadow-sm">个人全能管控系统 v3.4</h1>
+                <button onclick="openModal('backup-modal')" class="p-2 bg-white/60 rounded-xl shadow-sm"><i class="fa fa-database text-primary"></i></button>
+            </div>
+            <p class="text-gray-600">身心修心 · 健身减脂 · 作息睡眠</p>
+        </header>
+
+        <!-- 导航标签 -->
+        <div class="flex flex-wrap mb-6 bg-white/50 backdrop-blur-sm rounded-2xl p-1 shadow-md">
+            <button class="tab tab-active flex-1 px-3 py-2.5 font-medium rounded-xl text-sm md:text-base" data-tab="practice">身心修心</button>
+            <button class="tab flex-1 px-3 py-2.5 font-medium text-gray-600 hover:text-primary rounded-xl text-sm md:text-base" data-tab="fitness">健身减脂</button>
+            <button class="tab flex-1 px-3 py-2.5 font-medium text-gray-600 hover:text-primary rounded-xl text-sm md:text-base" data-tab="sleep">作息睡眠</button>
+        </div>
+
+        <!-- 内容区域 -->
+        <div id="content">
+            <!-- 模块1：身心修心 -->
+            <div id="practice-tab" class="tab-content">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                    <div class="card text-center p-3"><h3 class="text-xs font-medium text-gray-700 mb-1">今日起心动念</h3><p id="today-distractions" class="text-2xl font-bold text-danger">0</p><span class="text-gray-500 text-xs">次</span></div>
+                    <div class="card text-center p-3"><h3 class="text-xs font-medium text-gray-700 mb-1">最长清净天数</h3><p id="max-clean-days" class="text-2xl font-bold text-success">0</p><span class="text-gray-500 text-xs">天</span></div>
+                    <div class="card text-center p-3"><h3 class="text-xs font-medium text-gray-700 mb-1">今日诵经</h3><p id="today-meditation" class="text-2xl font-bold text-practice">0</p><span class="text-gray-500 text-xs">次</span></div>
+                    <div class="card text-center p-3"><h3 class="text-xs font-medium text-gray-700 mb-1">连续修行</h3><p id="practice-streak" class="text-2xl font-bold text-primary">0</p><span class="text-gray-500 text-xs">天</span></div>
+                </div>
+
+                <div class="card mb-5">
+                    <h3 class="text-lg font-medium text-gray-700 mb-4">快速操作</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                        <!-- 修复：点击打开杂念弹窗 -->
+                        <button onclick="openDistractionModal()" class="btn btn-danger py-3"><i class="fa fa-exclamation-triangle mr-1"></i> 记录杂念</button>
+                        <button onclick="addMeditation('morning')" class="btn btn-practice py-3"><i class="fa fa-sun-o mr-1"></i> 上午诵读完成</button>
+                        <button onclick="addMeditation('afternoon')" class="btn btn-practice py-3"><i class="fa fa-moon-o mr-1"></i> 下午诵读完成</button>
+                    </div>
+                    <div><label class="block text-gray-700 mb-1">自省/感悟</label><textarea id="practice-note" class="input" rows="2" placeholder="记录杂念产生的场景或今日修行心得..."></textarea></div>
+                </div>
+
+                <!-- 转移念头方法 -->
+                <div class="card mb-5"><h3 class="text-lg font-medium text-gray-700 mb-4">💡 杂念转移方法（点击查看详情）</h3><div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div class="method-card p-3 rounded-xl text-center" onclick="showMethodDetail('深呼吸法', '使用4-7-8呼吸法：用鼻子吸气4秒，憋气7秒，用嘴呼气8秒。重复3次，能快速平静下来。')"><i class="fa fa-leaf text-2xl text-green-500 mb-2"></i><p class="text-sm font-medium">深呼吸法</p></div>
+                    <div class="method-card p-3 rounded-xl text-center" onclick="showMethodDetail('冷水洗脸', '立刻去洗手间用冷水洗脸，刺激面部神经，能瞬间清醒，打断杂念链条。')"><i class="fa fa-tint text-2xl text-blue-500 mb-2"></i><p class="text-sm font-medium">冷水洗脸</p></div>
+                    <div class="method-card p-3 rounded-xl text-center" onclick="showMethodDetail('运动转移', '立刻做10个俯卧撑或20个深蹲，让身体疲劳，大脑就不会胡思乱想了。')"><i class="fa fa-heartbeat text-2xl text-red-500 mb-2"></i><p class="text-sm font-medium">运动转移</p></div>
+                    <div class="method-card p-3 rounded-xl text-center" onclick="showMethodDetail('诵经转移', '立刻念10遍南无观世音菩萨，专注于经文，让杂念自然消散。')"><i class="fa fa-book text-2xl text-purple-500 mb-2"></i><p class="text-sm font-medium">诵经转移</p></div>
+                    <div class="method-card p-3 rounded-xl text-center" onclick="showMethodDetail('冷水洗手', '用冷水冲洗双手30秒，感受水的温度和流动，把注意力拉回当下。')"><i class="fa fa-hand-paper-o text-2xl text-cyan-500 mb-2"></i><p class="text-sm font-medium">冷水洗手</p></div>
+                    <div class="method-card p-3 rounded-xl text-center" onclick="showMethodDetail('转移注意力', '立刻看向窗外，数30秒内经过的车辆或飞鸟，让大脑专注于外部事物。')"><i class="fa fa-eye text-2xl text-yellow-500 mb-2"></i><p class="text-sm font-medium">转移注意力</p></div>
+                </div></div>
+
+                <!-- 奖励系统 -->
+                <div class="card reward-card mb-5"><h3 class="text-lg font-medium text-gray-700 mb-4">🏆 奖励系统</h3><div class="mb-4 p-3 bg-white/60 rounded-xl"><h4 class="font-medium text-gray-700 mb-2">今日奖励状态</h4><div id="today-reward-status" class="text-gray-600">今日还没有记录杂念，继续保持！</div></div><div class="space-y-3"><div><h4 class="font-medium text-gray-700 mb-2">📌 日奖励</h4><ul class="text-sm text-gray-600 space-y-1"><li>✅ <span class="text-success font-medium">0次杂念</span>：奖励看1集动漫/玩30分钟游戏</li><li>✅ <span class="text-warning font-medium">1-2次杂念</span>：奖励吃一个水果/喝一杯奶茶</li><li>❌ <span class="text-danger font-medium">3次及以上</span>：无奖励，额外加诵1遍经</li></ul></div><div><h4 class="font-medium text-gray-700 mb-2">📌 周奖励</h4><ul class="text-sm text-gray-600 space-y-1"><li>✅ <span class="text-success font-medium">连续7天清净</span>：奖励一顿想吃的大餐</li><li>✅ <span class="text-warning font-medium">平均每天<1次</span>：奖励买一件小礼物</li></ul></div><div><h4 class="font-medium text-gray-700 mb-2">📌 月奖励</h4><ul class="text-sm text-gray-600 space-y-1"><li>✅ <span class="text-success font-medium">连续30天清净</span>：奖励一次短途旅行</li><li>✅ <span class="text-warning font-medium">平均每天<0.5次</span>：奖励买一件心仪已久的物品</li></ul></div><button onclick="claimReward()" class="btn btn-reward w-full mt-4"><i class="fa fa-gift mr-1"></i> 领取今日奖励</button></div>
+
+                <!-- 杂念趋势图 -->
+                <div class="card mb-5"><h3 class="text-lg font-medium text-gray-700 mb-4">杂念波动趋势</h3><canvas id="distraction-chart" height="150"></canvas></div>
+
+                <!-- 修心记录 -->
+                <div class="card"><h3 class="text-lg font-medium text-gray-700 mb-4">修心记录</h3><div id="practice-list" class="space-y-2 max-h-[400px] overflow-y-auto"><p class="text-gray-500 text-center py-4">暂无记录</p></div></div>
+            </div>
+
+            <!-- 模块2：健身减脂 -->
+            <div id="fitness-tab" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">今日状态</h3><p id="today-status" class="text-xl font-bold text-primary">锻炼日</p></div>
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">今日运动</h3><p id="today-fitness" class="text-3xl font-bold text-success">0</p><span class="text-gray-500 text-sm">分钟</span></div>
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">今日消耗</h3><p id="today-calories" class="text-3xl font-bold text-warning">0</p><span class="text-gray-500 text-sm">千卡</span></div>
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">当前体重</h3><p id="current-weight" class="text-3xl font-bold text-warning">--</p><span class="text-gray-500 text-sm">kg</span></div>
+                </div>
+
+                <div id="workout-form-container" class="card mb-6"><h3 class="text-lg font-medium text-gray-700 mb-4">今日健身打卡</h3><div class="bg-blue-50/60 backdrop-blur-sm p-4 rounded-xl mb-4 border border-blue-100"><h4 class="font-medium text-blue-600 mb-1">今日训练目标</h4><p>超慢跑 30分钟 或 蛙泳 45分钟</p></div><form id="fitness-form" class="space-y-4"><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label class="block text-gray-700 mb-1">运动项目</label><select id="fitness-type" class="select"><option value="jogging">超慢跑</option><option value="swimming">蛙泳</option></select></div><div><label class="block text-gray-700 mb-1">运动时长</label><input type="number" id="fitness-duration" class="input" placeholder="分钟" required></div><div><label class="block text-gray-700 mb-1">今日体重</label><input type="number" id="fitness-weight" class="input" step="0.1" placeholder="kg"></div></div><div><label class="block text-gray-700 mb-1">训练备注</label><textarea id="fitness-note" class="input" rows="2" placeholder="训练感受..."></textarea></div><div class="flex gap-4"><button type="submit" class="btn btn-success flex-1"><i class="fa fa-check mr-1"></i> 完成打卡</button><button type="button" id="switch-to-cheat-btn" class="btn btn-cheat"><i class="fa fa-birthday-cake mr-1"></i> 改为放纵日</button></div></form></div>
+
+                <div id="cheat-form-container" class="card mb-6 hidden"><h3 class="text-lg font-medium text-cheat mb-4">🍕 今日放纵日</h3><form id="cheat-form" class="space-y-4"><div><label class="block text-gray-700 mb-2">选择放纵食物</label><div class="flex flex-wrap gap-2 mb-3"><span class="food-tag food-tag-unselected" data-food="麦当劳" data-calories="500">麦当劳</span><span class="food-tag food-tag-unselected" data-food="奶茶" data-calories="350">奶茶</span><span class="food-tag food-tag-unselected" data-food="烧烤" data-calories="800">烧烤</span><span class="food-tag food-tag-unselected" data-food="火锅" data-calories="1000">火锅</span><span class="food-tag food-tag-unselected" data-food="其他" data-calories="0">其他</span></div><p class="text-sm text-gray-600">估算摄入: <span id="cheat-calories" class="font-medium text-danger">0</span> 千卡</p></div><div><label class="block text-gray-700 mb-1">今日体重</label><input type="number" id="cheat-weight" class="input" step="0.1" placeholder="kg"></div><div class="flex gap-4"><button type="submit" class="btn btn-cheat flex-1"><i class="fa fa-check mr-1"></i> 完成记录</button><button type="button" id="switch-to-workout-btn" class="btn btn-primary"><i class="fa fa-dumbbell mr-1"></i> 改为锻炼日</button></div></form></div>
+
+                <div class="card"><h3 class="text-lg font-medium text-gray-700 mb-4">健身记录</h3><div id="fitness-list" class="space-y-2 max-h-[400px] overflow-y-auto"><p class="text-gray-500 text-center py-4">暂无记录</p></div></div>
+            </div>
+
+            <!-- 模块3：作息睡眠 -->
+            <div id="sleep-tab" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">昨晚睡眠</h3><p id="last-night-sleep" class="text-3xl font-bold text-sleep">--</p><span class="text-gray-500 text-sm">小时</span></div>
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">本周平均</h3><p id="week-avg-sleep" class="text-3xl font-bold text-sleep">--</p><span class="text-gray-500 text-sm">小时</span></div>
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">入睡时间</h3><p id="bedtime" class="text-xl font-bold text-sleep">--:--</p></div>
+                    <div class="card text-center"><h3 class="text-sm font-medium text-gray-700 mb-1">起床时间</h3><p id="waketime" class="text-xl font-bold text-sleep">--:--</p></div>
+                </div>
+
+                <div class="card mb-6"><h3 class="text-lg font-medium text-gray-700 mb-4">记录睡眠</h3><form id="sleep-form" class="space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-gray-700 mb-1">入睡时间</label><input type="time" id="sleep-bedtime" class="input" value="23:00"></div><div><label class="block text-gray-700 mb-1">起床时间</label><input type="time" id="sleep-waketime" class="input" value="07:00"></div></div><button type="submit" class="btn btn-sleep"><i class="fa fa-bed mr-1"></i> 保存睡眠记录</button></form></div>
+
+                <div class="card"><h3 class="text-lg font-medium text-gray-700 mb-4">睡眠记录</h3><div id="sleep-list" class="space-y-2 max-h-[400px] overflow-y-auto"><p class="text-gray-500 text-center py-4">暂无记录</p></div></div>
+            </div>
+        </div>
+
+        <footer class="mt-10 text-center text-gray-500 text-sm safe-area-bottom"><p>个人全能管控系统 v3.4 | 数据本地存储，安全私密</p></footer>
+    </div>
+
+    <script>
+        // 生成粒子背景
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = Math.random() * 8 + 4 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = Math.random() * 10 + 10 + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // 本地存储工具
+        const Storage = {
+            get(key) { const data = localStorage.getItem(key); return data ? JSON.parse(data) : null; },
+            set(key, value) { localStorage.setItem(key, JSON.stringify(value)); },
+            add(key, item) { const data = this.get(key) || []; item.id = Date.now(); item.createdAt = new Date().toISOString(); data.unshift(item); this.set(key, data); return item; },
+            delete(key, id) { const data = this.get(key) || []; const filtered = data.filter(item => item.id !== id); this.set(key, filtered); }
+        };
+
+        // 初始化数据
+        function initData() {
+            if (!Storage.get('distraction')) Storage.set('distraction', []);
+            if (!Storage.get('meditation')) Storage.set('meditation', []);
+            if (!Storage.get('fitness')) Storage.set('fitness', []);
+            if (!Storage.get('sleep')) Storage.set('sleep', []);
+            if (!Storage.get('rewards')) Storage.set('rewards', []);
+            if (!Storage.get('fitnessPlan')) Storage.set('fitnessPlan', { workoutDays: [1,3,5,0] });
+        }
+
+        // iOS触感反馈
+        function hapticFeedback() { if (navigator.vibrate) navigator.vibrate(10); }
+
+        // 弹窗控制
+        function openModal(modalId) { hapticFeedback(); document.getElementById(modalId).classList.remove('hidden'); }
+        function closeModal(modalId) { hapticFeedback(); document.getElementById(modalId).classList.add('hidden'); }
+
+        // ==================== 修复：杂念弹窗逻辑 ====================
+        // 打开杂念弹窗（重置表单）
+        function openDistractionModal() {
+            hapticFeedback();
+            const modal = document.getElementById('distraction-modal');
+            modal.style.display = 'flex';
+            // 重置表单
+            document.querySelectorAll('#distraction-modal input[type="radio"]').forEach(r => r.checked = false);
+            document.getElementById('distraction-detail').value = '';
+            document.getElementById('distraction-reflection').value = '';
+        }
+
+        // 保存杂念记录（修复：防止弹窗误关）
+        function saveDistractionRecord(event) {
+            event.stopPropagation(); // 关键：阻止事件冒泡，避免弹窗被误关
+            hapticFeedback();
+
+            const checkedRadio = document.querySelector('#distraction-modal input[name="scene"]:checked');
+            if (!checkedRadio) { alert('请先选择一个场景哦～'); return; }
+            const scene = checkedRadio.value;
+            const detail = document.getElementById('distraction-detail').value.trim();
+            const reflection = document.getElementById('distraction-reflection').value.trim();
+
+            Storage.add('distraction', { scene, detail: detail || '无', reflection: reflection || '无', date: new Date().toISOString() });
+            closeModal('distraction-modal');
+            updatePracticeStats();
+            alert('杂念记录成功！保持觉察～');
+        }
+
+        // ==================== 数据备份/恢复 ====================
+        function exportData() {
+            hapticFeedback();
+            const allData = {
+                distraction: Storage.get('distraction'),
+                meditation: Storage.get('meditation'),
+                fitness: Storage.get('fitness'),
+                sleep: Storage.get('sleep'),
+                rewards: Storage.get('rewards'),
+                fitnessPlan: Storage.get('fitnessPlan'),
+                exportDate: new Date().toISOString()
+            };
+            const dataStr = JSON.stringify(allData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `管控系统备份_${new Date().toISOString().slice(0,10)}.json`;
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            alert('备份文件已下载！请保存到微信或云盘。');
+        }
+
+        function importData() {
+            hapticFeedback();
+            const fileInput = document.getElementById('import-file');
+            const file = fileInput.files[0];
+            if (!file) { alert('请选择备份文件'); return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (confirm('导入将覆盖现有数据，确定要继续吗？')) {
+                        if (importedData.distraction) Storage.set('distraction', importedData.distraction);
+                        if (importedData.meditation) Storage.set('meditation', importedData.meditation);
+                        if (importedData.fitness) Storage.set('fitness', importedData.fitness);
+                        if (importedData.sleep) Storage.set('sleep', importedData.sleep);
+                        if (importedData.rewards) Storage.set('rewards', importedData.rewards);
+                        if (importedData.fitnessPlan) Storage.set('fitnessPlan', importedData.fitnessPlan);
+                        alert('数据恢复成功！页面将刷新。');
+                        location.reload();
+                    }
+                } catch (error) { alert('文件格式错误，请选择正确的备份文件。'); }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            hapticFeedback();
+            if (confirm('警告：这将清除所有数据，且不可恢复！确定要清除吗？')) {
+                localStorage.clear();
+                alert('所有数据已清除！');
+                location.reload();
+            }
+        }
+
+        // ==================== 其他功能函数 ====================
+        function showMethodDetail(title, content) { hapticFeedback(); alert(`${title}\n\n${content}`); }
+
+        function updateRewardStatus() {
+            const distractions = Storage.get('distraction') || [];
+            const today = new Date().toDateString();
+            const todayCount = distractions.filter(d => new Date(d.date).toDateString() === today).length;
+            const statusEl = document.getElementById('today-reward-status');
+            if (todayCount === 0) statusEl.innerHTML = `<span class="text-success font-medium">🎉 太棒了！今日0次杂念！</span><br>可以领取最高级奖励：看1集动漫/玩30分钟游戏`;
+            else if (todayCount <= 2) statusEl.innerHTML = `<span class="text-warning font-medium">👍 不错！今日${todayCount}次杂念</span><br>可以领取基础奖励：吃一个水果/喝一杯奶茶`;
+            else statusEl.innerHTML = `<span class="text-danger font-medium">💪 继续努力！今日${todayCount}次杂念</span><br>今日无奖励，额外加诵1遍经`;
+        }
+
+        function claimReward() {
+            hapticFeedback();
+            const distractions = Storage.get('distraction') || [];
+            const today = new Date().toDateString();
+            const todayCount = distractions.filter(d => new Date(d.date).toDateString() === today).length;
+            const rewards = Storage.get('rewards') || [];
+            const todayReward = rewards.find(r => new Date(r.date).toDateString() === today);
+            if (todayReward) { alert('今日奖励已经领取过了，明天继续加油！'); return; }
+            if (todayCount === 0) { Storage.add('rewards', { type: 'daily', level: 'gold', count: 0 }); alert('🎉 恭喜领取最高级奖励！\n\n奖励内容：看1集动漫/玩30分钟游戏\n\n好好享受你的奖励吧！'); }
+            else if (todayCount <= 2) { Storage.add('rewards', { type: 'daily', level: 'silver', count: todayCount }); alert('👍 恭喜领取基础奖励！\n\n奖励内容：吃一个水果/喝一杯奶茶\n\n继续保持，明天争取0次杂念！'); }
+            else { alert('💪 今日没有奖励\n\n今日杂念次数：' + todayCount + '次\n\n明天继续努力，争取更少的杂念！'); }
+        }
+
+        function updatePracticeStats() {
+            const distractions = Storage.get('distraction') || [];
+            const meditations = Storage.get('meditation') || [];
+            const today = new Date().toDateString();
+            document.getElementById('today-distractions').textContent = distractions.filter(d => new Date(d.date).toDateString() === today).length;
+            document.getElementById('today-meditation').textContent = meditations.filter(m => new Date(m.createdAt).toDateString() === today).length;
+            updateRewardStatus();
+            updateDistractionChart();
+            updatePracticeList();
+        }
+
+        function updateDistractionChart() {
+            const distractions = Storage.get('distraction') || [];
+            const labels = [], data = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+                data.push(distractions.filter(item => new Date(item.date).toDateString() === d.toDateString()).length);
+            }
+            const ctx = document.getElementById('distraction-chart').getContext('2d');
+            if (window.distractionChart) window.distractionChart.destroy();
+            window.distractionChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: '杂念次数', data, borderColor: '#F87171', backgroundColor: 'rgba(248,113,113,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.3)' } }, x: { grid: { color: 'rgba(255,255,255,0.3)' } } } });
+        }
+
+        function updatePracticeList() {
+            const distractions = Storage.get('distraction') || [];
+            const meditations = Storage.get('meditation') || [];
+            const allRecords = [...distractions.map(d => ({...d, type: 'distraction'})), ...meditations.map(m => ({...m, type: 'meditation'}))].sort((a,b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+            const list = document.getElementById('practice-list');
+            if (allRecords.length === 0) { list.innerHTML = '<p class="text-gray-500 text-center py-4">暂无记录</p>'; return; }
+            list.innerHTML = allRecords.slice(0,20).map(record => {
+                const date = new Date(record.date || record.createdAt);
+                const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+                if (record.type === 'distraction') return `<div class="flex justify-between items-center p-3 bg-red-50/60 backdrop-blur-sm rounded-xl"><div><span class="inline-block px-2 py-0.5 text-xs bg-danger text-white rounded-full mr-2">杂念</span><span class="font-medium">${timeStr}</span>${record.scene ? `<span class="text-gray-600 ml-2">场景: ${record.scene}</span>` : ''}${record.detail ? `<p class="text-sm text-gray-500 mt-1">${record.detail}</p>` : ''}</div><button class="text-danger text-sm" onclick="deleteDistraction(${record.id})">删除</button></div>`;
+                else return `<div class="flex justify-between items-center p-3 bg-teal-50/60 backdrop-blur-sm rounded-xl"><div><span class="inline-block px-2 py-0.5 text-xs bg-practice text-white rounded-full mr-2">诵经</span><span class="font-medium">${timeStr}</span><span class="text-gray-600 ml-2">${record.type === 'morning' ? '上午' : '下午'}诵读</span>${record.note ? `<p class="text-sm text-gray-500 mt-1">${record.note}</p>` : ''}</div><button class="text-danger text-sm" onclick="deleteMeditation(${record.id})">删除</button></div>`;
+            }).join('');
+        }
+
+        function addMeditation(type) {
+            hapticFeedback();
+            const note = document.getElementById('practice-note').value;
+            Storage.add('meditation', { type, duration: 15, note: note || '' });
+            document.getElementById('practice-note').value = '';
+            updatePracticeStats();
+            alert('打卡成功！随喜赞叹！');
+        }
+
+        window.deleteDistraction = function(id) { hapticFeedback(); if (confirm('确定删除这条记录吗？')) { Storage.delete('distraction', id); updatePracticeStats(); } };
+        window.deleteMeditation = function(id) { hapticFeedback(); if (confirm('确定删除这条记录吗？')) { Storage.delete('meditation', id); updatePracticeStats(); } };
+
+        // 健身模块逻辑（简化，保留核心）
+        let selectedFoods = [];
+        function initFoodTags() { document.querySelectorAll('.food-tag').forEach(tag => tag.addEventListener('click', () => { hapticFeedback(); if (tag.classList.contains('food-tag-selected')) { tag.classList.remove('food-tag-selected'); tag.classList.add('food-tag-unselected'); selectedFoods = selectedFoods.filter(f => f.food !== tag.dataset.food); } else { tag.classList.remove('food-tag-unselected'); tag.classList.add('food-tag-selected'); selectedFoods.push({ food: tag.dataset.food, calories: parseInt(tag.dataset.calories) }); } document.getElementById('cheat-calories').textContent = selectedFoods.reduce((sum,f)=>sum+f.calories,0); })); }
+        function getTodayType() { const plan = Storage.get('fitnessPlan'); const today = new Date().getDay(); return plan.workoutDays.includes(today) ? 'workout' : 'cheat'; }
+        function updateTodayStatus() { const todayType = getTodayType(); const statusEl = document.getElementById('today-status'); if (todayType === 'workout') { statusEl.textContent = '锻炼日'; statusEl.className = 'text-xl font-bold text-primary'; document.getElementById('workout-form-container').classList.remove('hidden'); document.getElementById('cheat-form-container').classList.add('hidden'); } else { statusEl.textContent = '放纵日'; statusEl.className = 'text-xl font-bold text-cheat'; document.getElementById('workout-form-container').classList.add('hidden'); document.getElementById('cheat-form-container').classList.remove('hidden'); } }
+        function updateFitnessStats() { const fitness = Storage.get('fitness') || []; const today = new Date().toDateString(); document.getElementById('today-fitness').textContent = fitness.filter(f => new Date(f.createdAt).toDateString() === today && f.type !== 'cheat').reduce((sum,f)=>sum+(f.duration||0),0); document.getElementById('today-calories').textContent = fitness.filter(f => new Date(f.createdAt).toDateString() === today && f.type !== 'cheat').reduce((sum,f)=>sum+(f.calories||0),0); if (fitness.length>0 && fitness[0].weight) document.getElementById('current-weight').textContent = fitness[0].weight; updateTodayStatus(); updateFitnessList(); }
+        function updateFitnessList() { const fitness = Storage.get('fitness') || []; const list = document.getElementById('fitness-list'); if (fitness.length===0) { list.innerHTML='<p class="text-gray-500 text-center py-4">暂无记录</p>'; return; } list.innerHTML=fitness.slice(0,15).map(f=>{ const d=new Date(f.createdAt); const ds=`${d.getMonth()+1}/${d.getDate()}`; return `<div class="flex justify-between items-center p-3 ${f.type==='cheat'?'bg-pink-50/60':'bg-gray-50/60'} backdrop-blur-sm rounded-xl"><div><span class="font-medium">${ds}</span><span class="text-gray-600 ml-2">${f.type==='cheat'?'🍕 放纵日':f.type==='jogging'?'超慢跑':'蛙泳'}</span>${f.type!=='cheat'&&f.duration?`<span class="text-gray-600 ml-2">${f.duration}分钟</span>`:''}${f.type!=='cheat'&&f.calories?`<span class="text-gray-600 ml-2">消耗${f.calories}千卡</span>`:''}${f.weight?`<span class="text-gray-600 ml-2">体重:${f.weight}kg</span>`:''}</div><button class="text-danger text-sm" onclick="deleteFitness(${f.id})">删除</button></div>`; }).join(''); }
+        document.getElementById('switch-to-cheat-btn').addEventListener('click', ()=>{ if(confirm('确定改为放纵日吗？')) { document.getElementById('today-status').textContent='放纵日'; document.getElementById('today-status').className='text-xl font-bold text-cheat'; document.getElementById('workout-form-container').classList.add('hidden'); document.getElementById('cheat-form-container').classList.remove('hidden'); } });
+        document.getElementById('switch-to-workout-btn').addEventListener('click', ()=>{ if(confirm('确定改为锻炼日吗？')) { document.getElementById('today-status').textContent='锻炼日'; document.getElementById('today-status').className='text-xl font-bold text-primary'; document.getElementById('cheat-form-container').classList.add('hidden'); document.getElementById('workout-form-container').classList.remove('hidden'); } });
+        document.getElementById('fitness-form').addEventListener('submit', (e)=>{ e.preventDefault(); hapticFeedback(); const type=document.getElementById('fitness-type').value; const duration=parseInt(document.getElementById('fitness-duration').value); const weight=document.getElementById('fitness-weight').value; const note=document.getElementById('fitness-note').value; const calories=Math.round((type==='jogging'?6:8)*(weight||75)*(duration/60)); Storage.add('fitness',{type,duration,weight,note,calories}); e.target.reset(); updateFitnessStats(); alert(`打卡成功！消耗了${calories}千卡～`); });
+        document.getElementById('cheat-form').addEventListener('submit', (e)=>{ e.preventDefault(); hapticFeedback(); const cheat={type:'cheat',foods:selectedFoods.map(f=>f.food),calories:selectedFoods.reduce((sum,f)=>sum+f.calories,0),weight:document.getElementById('cheat-weight').value}; Storage.add('fitness',cheat); e.target.reset(); document.querySelectorAll('.food-tag').forEach(t=>{t.classList.remove('food-tag-selected'); t.classList.add('food-tag-unselected');}); selectedFoods=[]; document.getElementById('cheat-calories').textContent='0'; updateFitnessStats(); alert('放纵日记录成功！明天继续加油～'); });
+        window.deleteFitness=function(id){ hapticFeedback(); if(confirm('确定删除这条记录吗？')){ Storage.delete('fitness',id); updateFitnessStats(); } };
+
+        // 睡眠模块逻辑（简化，保留核心）
+        function updateSleepStats() { const sleep=Storage.get('sleep')||[]; if(sleep.length>0){ const last=sleep[0]; document.getElementById('last-night-sleep').textContent=last.duration.toFixed(1); document.getElementById('bedtime').textContent=last.bedtime; document.getElementById('waketime').textContent=last.waketime; const weekAgo=new Date(); weekAgo.setDate(weekAgo.getDate()-7); const weekSleep=sleep.filter(s=>new Date(s.createdAt)>=weekAgo); document.getElementById('week-avg-sleep').textContent=(weekSleep.reduce((sum,s)=>sum+s.duration,0)/weekSleep.length).toFixed(1); } updateSleepList(); }
+        function updateSleepList() { const sleep=Storage.get('sleep')||[]; const list=document.getElementById('sleep-list'); if(sleep.length===0){ list.innerHTML='<p class="text-gray-500 text-center py-4">暂无记录</p>'; return; } list.innerHTML=sleep.slice(0,15).map(s=>{ const d=new Date(s.createdAt); const ds=`${d.getMonth()+1}/${d.getDate()}`; return `<div class="flex justify-between items-center p-3 bg-gray-50/60 backdrop-blur-sm rounded-xl"><div><span class="font-medium">${ds}</span><span class="text-gray-600 ml-2">${s.bedtime} - ${s.waketime}</span><span class="text-gray-600 ml-2">${s.duration.toFixed(1)}小时</span></div><button class="text-danger text-sm" onclick="deleteSleep(${s.id})">删除</button></div>`; }).join(''); }
+        document.getElementById('sleep-form').addEventListener('submit', (e)=>{ e.preventDefault(); hapticFeedback(); const bedtime=document.getElementById('sleep-bedtime').value; const waketime=document.getElementById('sleep-waketime').value; const [bh,bm]=bedtime.split(':').map(Number); const [wh,wm]=waketime.split(':').map(Number); let duration=(wh*60+wm)-(bh*60+bm); if(duration<0) duration+=1440; duration/=60; Storage.add('sleep',{bedtime,waketime,duration}); updateSleepStats(); alert('睡眠记录保存成功！'); });
+        window.deleteSleep=function(id){ hapticFeedback(); if(confirm('确定删除这条记录吗？')){ Storage.delete('sleep',id); updateSleepStats(); } };
+
+        // 标签切换逻辑
+        document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => { hapticFeedback(); document.querySelectorAll('.tab').forEach(t => { t.classList.remove('tab-active'); t.classList.add('text-gray-600'); }); tab.classList.add('tab-active'); tab.classList.remove('text-gray-600'); document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden')); document.getElementById(`${tab.dataset.tab}-tab`).classList.remove('hidden'); }));
+
+        // 初始化
+        function init() { createParticles(); initData(); initFoodTags(); updatePracticeStats(); updateFitnessStats(); updateSleepStats(); }
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
