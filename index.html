@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#FF6B9D">
-    <title>个人全能管控系统 v4.3</title>
+    <title>life-control v4.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
@@ -688,7 +688,7 @@
                 </div>
                 <div class="border-t pt-4">
                     <h4 class="font-semibold text-gray-700 mb-3">📜 金币明细</h4>
-                    <div id="coins-history" class="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                    <div id="coins-history" class="space-y-2 pr-1">
                         <p class="text-gray-400 text-center text-sm py-4">暂无记录</p>
                     </div>
                 </div>
@@ -716,7 +716,7 @@
                         <span id="draw-card-badge" class="hidden w-2 h-2 bg-red-500 rounded-full"></span>
                     </button>
                 </div>
-                <h1 class="text-xl md:text-2xl font-bold text-dark drop-shadow-sm">个人全能管控系统 <span class="text-primary">v4.3</span></h1>
+                <h1 class="text-xl md:text-2xl font-bold text-dark drop-shadow-sm">life-control <span class="text-primary">v4.3</span></h1>
                 <button onclick="App.openModal('backup-modal')" class="p-3 bg-white/70 backdrop-blur-md rounded-xl shadow-sm hover:shadow-md transition-all">
                     <i class="fa fa-database text-primary text-lg"></i>
                 </button>
@@ -1002,7 +1002,7 @@
             <!-- 修心记录 -->
             <div class="card">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">修心记录</h3>
-                <div id="practice-list" class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                <div id="practice-list" class="space-y-2 pr-1">
                     <p class="text-gray-400 text-center py-8">暂无记录</p>
                 </div>
             </div>
@@ -1108,7 +1108,7 @@
             <!-- 健身记录 -->
             <div class="card">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">健身记录</h3>
-                <div id="fitness-list" class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                <div id="fitness-list" class="space-y-2 pr-1">
                     <p class="text-gray-400 text-center py-8">暂无记录</p>
                 </div>
             </div>
@@ -1371,20 +1371,91 @@
             <!-- 睡眠记录列表 -->
             <div class="card">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">睡眠记录</h3>
-                <div id="sleep-list" class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                <div id="sleep-list" class="space-y-2 pr-1">
                     <p class="text-gray-400 text-center py-8">暂无记录</p>
                 </div>
             </div>
         </div>
 
         <footer class="mt-10 text-center text-gray-400 text-sm safe-area-bottom">
-            <p>个人全能管控系统 v4.3 | 数据本地存储，安全私密</p>
+            <p>life-control v4.3 | 数据本地存储，安全私密</p>
         </footer>
     </div>
 
     <script>
     // ==================== 核心应用对象 ====================
     const App = {
+        // 分页状态
+        _pagination: {
+            practice: { page: 1, perPage: 10 },
+            fitness: { page: 1, perPage: 10 },
+            sleep: { page: 1, perPage: 10 },
+            phoneUsage: { page: 1, perPage: 10 },
+            coins: { page: 1, perPage: 10 }
+        },
+
+        // 分页渲染器
+        renderPaginatedList(containerId, items, pageKey, renderFn) {
+            const state = this._pagination[pageKey];
+            const total = items.length;
+            const totalPages = Math.max(1, Math.ceil(total / state.perPage));
+            // 修正越界页码
+            if (state.page > totalPages) state.page = totalPages;
+            if (state.page < 1) state.page = 1;
+
+            const start = (state.page - 1) * state.perPage;
+            const end = start + state.perPage;
+            const pageItems = items.slice(start, end);
+
+            const container = document.getElementById(containerId);
+            if (total === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">暂无记录</p>';
+                return;
+            }
+
+            let html = pageItems.map(renderFn).join('');
+
+            // 分页控制条
+            if (total > state.perPage) {
+                html += `
+                <div class="flex items-center justify-between mt-4 px-2 select-none">
+                    <button onclick="App.prevPage('${pageKey}')" 
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${state.page <= 1 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-white/80 text-primary hover:bg-primary hover:text-white shadow-sm'}"
+                        ${state.page <= 1 ? 'disabled' : ''}>
+                        <i class="fa fa-chevron-left mr-1"></i>上一页
+                    </button>
+                    <span class="text-sm text-gray-500 font-medium">${state.page} / ${totalPages}</span>
+                    <button onclick="App.nextPage('${pageKey}')" 
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${state.page >= totalPages ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-white/80 text-primary hover:bg-primary hover:text-white shadow-sm'}"
+                        ${state.page >= totalPages ? 'disabled' : ''}>
+                        下一页<i class="fa fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+                <p class="text-center text-xs text-gray-400 mt-1">共 ${total} 条，每页 ${state.perPage} 条</p>`;
+            }
+            container.innerHTML = html;
+        },
+
+        prevPage(pageKey) {
+            this.haptic();
+            this._pagination[pageKey].page--;
+            this.refreshList(pageKey);
+        },
+
+        nextPage(pageKey) {
+            this.haptic();
+            this._pagination[pageKey].page++;
+            this.refreshList(pageKey);
+        },
+
+        refreshList(pageKey) {
+            if (pageKey === 'practice') this.updatePracticeList();
+            else if (pageKey === 'fitness') this.updateFitnessList();
+            else if (pageKey === 'sleep') this.updateSleepList();
+            else if (pageKey === 'phoneUsage') this.updatePhoneUsageList();
+            else if (pageKey === 'coins') this.updateCoinsHistory();
+        },
+
         // 数据存储
         storage: {
             keys: ['distraction', 'meditation', 'fitness', 'sleep', 'rewards', 'settings', 'phoneUsage', 'coins', 'customTasks', 'dailyCard'],
@@ -1450,6 +1521,10 @@
             this.haptic();
             const modal = document.getElementById(id);
             if (modal) modal.classList.add('hidden');
+            // 如果是求签弹窗，强制重置动画状态，防止后台返回时定时器操作已隐藏 DOM
+            if (id === 'qiuqian-modal') {
+                this.resetQiuqian();
+            }
         },
 
         // ==================== 首页欢迎弹窗 ====================
@@ -2273,8 +2348,20 @@
                 labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
                 data.push(distractions.filter(item => new Date(item.date).toDateString() === d.toDateString()).length);
             }
-            const ctx = document.getElementById('distraction-chart').getContext('2d');
+            const canvas = document.getElementById('distraction-chart');
+            const ctx = canvas.getContext('2d');
             if (window.distractionChart) window.distractionChart.destroy();
+            // 空数据提示：如果近7天全为0且无任何记录，显示占位文字
+            const hasData = data.some(v => v > 0);
+            if (!hasData) {
+                // 绘制占位提示
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '14px sans-serif';
+                ctx.fillStyle = '#9CA3AF';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无近7天数据，记录杂念后将自动显示趋势', canvas.width / 2, canvas.height / 2);
+                return;
+            }
             window.distractionChart = new Chart(ctx, {
                 type: 'line',
                 data: { labels, datasets: [{
@@ -2297,13 +2384,7 @@
                 ...meditations.map(m => ({ ...m, kind: 'meditation', date: m.createdAt }))
             ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            const list = document.getElementById('practice-list');
-            if (all.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 text-center py-8">暂无记录</p>';
-                return;
-            }
-
-            list.innerHTML = all.slice(0, 20).map(item => {
+            this.renderPaginatedList('practice-list', all, 'practice', item => {
                 const date = new Date(item.date);
                 const timeStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
                 if (item.kind === 'distraction') {
@@ -2333,7 +2414,7 @@
                         <button onclick="App.deleteItem('meditation', ${item.id})" class="text-danger text-sm ml-2 hover:opacity-70">删除</button>
                     </div>`;
                 }
-            }).join('');
+            });
         },
 
         // ==================== 健身减脂模块 ====================
@@ -2451,13 +2532,8 @@
 
         updateFitnessList() {
             const fitness = this.storage.get('fitness');
-            const list = document.getElementById('fitness-list');
-            if (fitness.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 text-center py-8">暂无记录</p>';
-                return;
-            }
             const typeMap = { jogging: '超慢跑', swimming: '蛙泳', cheat: '🍕 放纵日' };
-            list.innerHTML = fitness.slice(0, 15).map(f => {
+            this.renderPaginatedList('fitness-list', fitness, 'fitness', f => {
                 const date = new Date(f.createdAt);
                 const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
                 const isCheat = f.type === 'cheat';
@@ -2474,7 +2550,7 @@
                     </div>
                     <button onclick="App.deleteItem('fitness', ${f.id})" class="text-danger text-sm ml-2 hover:opacity-70">删除</button>
                 </div>`;
-            }).join('');
+            });
         },
 
         // ==================== 作息睡眠模块（增强版） ====================
@@ -2699,11 +2775,13 @@
 
         savePhoneUsage(e) {
             e.preventDefault();
+            if (this._savingPhone) return;
+            this._savingPhone = true;
             this.haptic();
             const hours = parseFloat(document.getElementById('phone-hours').value) || 0;
             const scene = document.getElementById('phone-scene').value;
             const note = document.getElementById('phone-note').value.trim();
-            if (hours <= 0) { alert('请输入有效的手机使用时长'); return; }
+            if (hours <= 0) { alert('请输入有效的手机使用时长'); this._savingPhone = false; return; }
             this.storage.add('phoneUsage', { hours, scene, note });
             document.getElementById('phone-hours').value = 3;
             document.getElementById('phone-slider').value = 3;
@@ -2724,17 +2802,13 @@
             this.updatePhoneUsageList();
             this.updateSleepStats();
             alert(`手机使用记录保存成功！\n今日已记录 ${hours} 小时\n使用场景：${scene}${coins > 0 ? '\n获得金币：+' + coins : ''}`);
+            this._savingPhone = false;
         },
 
         updatePhoneUsageList() {
             const phoneUsage = this.storage.get('phoneUsage');
-            const list = document.getElementById('phone-usage-list');
-            if (phoneUsage.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 text-center py-4 text-sm">暂无手机使用记录</p>';
-                return;
-            }
             const today = new Date().toDateString();
-            list.innerHTML = phoneUsage.slice(0, 10).map(p => {
+            this.renderPaginatedList('phone-usage-list', phoneUsage, 'phoneUsage', p => {
                 const date = new Date(p.createdAt);
                 const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
                 const isToday = date.toDateString() === today;
@@ -2753,7 +2827,7 @@
                     </div>
                     <button onclick="App.deleteItem('phoneUsage', ${p.id})" class="text-danger text-sm ml-2 hover:opacity-70 shrink-0">删除</button>
                 </div>`;
-            }).join('');
+            });
         },
 
         getTodayPhoneHours() {
@@ -2889,12 +2963,7 @@
 
         updateSleepList() {
             const sleep = this.storage.get('sleep');
-            const list = document.getElementById('sleep-list');
-            if (sleep.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 text-center py-8">暂无记录</p>';
-                return;
-            }
-            list.innerHTML = sleep.slice(0, 15).map(s => {
+            this.renderPaginatedList('sleep-list', sleep, 'sleep', s => {
                 const date = new Date(s.createdAt);
                 const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
                 const risk = s.riskIndex || this.calculateFinalRiskIndex(s.bedtime, s.duration, s.phoneHours || 0);
@@ -2920,7 +2989,7 @@
                     </div>
                     <button onclick="App.deleteItem('sleep', ${s.id})" class="text-danger text-sm ml-2 hover:opacity-70 shrink-0">删除</button>
                 </div>`;
-            }).join('');
+            });
         },
 
         // ==================== 睡前时间表生成 ====================
@@ -3012,6 +3081,16 @@
             this.haptic();
             if (!confirm('确定删除这条记录吗？')) return;
             this.storage.delete(key, id);
+            // 智能分页：仅当当前页无数据时才回退，避免用户体验跳跃
+            const pageMap = { distraction: 'practice', meditation: 'practice', fitness: 'fitness', sleep: 'sleep', phoneUsage: 'phoneUsage' };
+            const pageKey = pageMap[key];
+            if (pageKey && this._pagination[pageKey]) {
+                const state = this._pagination[pageKey];
+                const allItems = this.storage.get(key);
+                const totalPages = Math.max(1, Math.ceil(allItems.length / state.perPage));
+                if (state.page > totalPages) state.page = totalPages;
+                if (state.page < 1) state.page = 1;
+            }
             if (key === 'distraction' || key === 'meditation') this.updatePracticeStats();
             if (key === 'fitness') this.updateFitnessStats();
             if (key === 'sleep') this.updateSleepStats();
@@ -3040,27 +3119,12 @@
             document.getElementById('coin-balance').textContent = balance;
             document.getElementById('modal-coin-balance').textContent = balance;
             document.getElementById('modal-coin-rmb').textContent = balance;
-            const distractions = this.storage.get('distraction');
-            const today = new Date().toDateString();
-            const todayCount = distractions.filter(d => new Date(d.date).toDateString() === today).length;
-            const coinEl = document.getElementById('reward-coins');
-            if (todayCount === 0) {
-                coinEl.innerHTML = '💰 今日可领取 <span class="font-bold">10金币</span>（≈10元）';
-            } else if (todayCount <= 2) {
-                coinEl.innerHTML = '💰 今日可领取 <span class="font-bold">5金币</span>（≈5元）';
-            } else {
-                coinEl.innerHTML = '💰 今日无金币奖励，明天继续加油！';
-            }
+            // 奖励提示已由 updateRewardStatus 统一渲染，此处不再重复操作 DOM
         },
 
         updateCoinsHistory() {
             const coins = this.storage.get('coins');
-            const list = document.getElementById('coins-history');
-            if (coins.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 text-center text-sm py-4">暂无记录</p>';
-                return;
-            }
-            list.innerHTML = coins.slice(0, 20).map(c => {
+            this.renderPaginatedList('coins-history', coins, 'coins', c => {
                 const date = new Date(c.createdAt);
                 const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
                 const isIncome = c.amount > 0;
@@ -3071,25 +3135,28 @@
                     </div>
                     <span class="font-bold ${isIncome ? 'text-success' : 'text-danger'} ml-2 shrink-0">${isIncome ? '+' : ''}${c.amount}金币</span>
                 </div>`;
-            }).join('');
+            });
         },
 
         // 修复5: 金币兑换增加负数限制
         exchangeCoins() {
+            if (this._exchanging) return;
+            this._exchanging = true;
             this.haptic();
             const input = document.getElementById('exchange-amount');
             const amount = parseInt(input.value);
             const balance = this.getCoinBalance();
             const hint = document.getElementById('exchange-hint');
-            if (!amount || amount <= 0) { hint.textContent = '请输入大于0的兑换数量'; hint.className = 'text-xs text-danger'; return; }
-            if (amount > balance) { hint.textContent = `余额不足，当前只有 ${balance} 金币`; hint.className = 'text-xs text-danger'; return; }
-            if (!confirm(`确定兑换 ${amount} 金币为 ${amount} 人民币吗？\n\n兑换后金币不可恢复，请确认已用于实际消费。`)) return;
+            if (!amount || amount <= 0) { hint.textContent = '请输入大于0的兑换数量'; hint.className = 'text-xs text-danger'; this._exchanging = false; return; }
+            if (amount > balance) { hint.textContent = `余额不足，当前只有 ${balance} 金币`; hint.className = 'text-xs text-danger'; this._exchanging = false; return; }
+            if (!confirm(`确定兑换 ${amount} 金币为 ${amount} 人民币吗？\n\n兑换后金币不可恢复，请确认已用于实际消费。`)) { this._exchanging = false; return; }
             this.deductCoins(amount, `兑换人民币：${amount}元`);
             input.value = '';
             hint.textContent = `成功兑换 ${amount} 金币 = ${amount} 人民币！`;
             hint.className = 'text-xs text-success';
             this.updateCoinDisplay();
             this.updateCoinsHistory();
+            this._exchanging = false;
         },
 
         // ==================== 数据备份/恢复 ====================
@@ -3108,7 +3175,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `管控系统备份_${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = `life-control备份_${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
             alert('备份文件已下载！请保存到微信或云盘。');
